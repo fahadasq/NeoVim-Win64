@@ -1,0 +1,8 @@
+# ── Neovim config .gitignore ─────────────────────────────────────────────────
+data/
+nvim/*.log
+
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

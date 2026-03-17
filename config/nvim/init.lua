@@ -1,0 +1,19 @@
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+if not vim.loop.fs_stat(lazypath) then
+  vim.fn.system({
+    "git", "clone", "--filter=blob:none",
+    "https://github.com/folke/lazy.nvim.git",
+    "--branch=stable",
+    lazypath,
+  })
+end
+vim.opt.rtp:prepend(lazypath)
+
+require("lazy").setup(require("plugins"), {})
+
+require("options")           -- indentation, wrap off, formatoptions
+require("keymaps")           -- movement, deletion, save, escape, C-m, etc.
+require("windows")           -- panels, kill-buffer, goto-def; triggers terminal.lua
+require("telescope_bindings")
+require("lsp")
+require("completion")
