@@ -1,4 +1,4 @@
--- lua/keymaps.lua
+
 
 -- ─── Character classifier ─────────────────────────────────────────────────────
 
@@ -432,6 +432,8 @@ vim.keymap.set('n', '<leader>fd', delete_file,
 -- Priority: diagnostics (errors/warnings) first, LSP hover as fallback.
 -- NOTE: <C-m> = <CR> in most terminals.  If Enter breaks, rebind to <M-m>.
 
+vim.keymap.set('n', '<C-p>', vim.lsp.buf.signature_help)
+
 vim.keymap.set('n', '<C-m>', function()
   local lnum  = vim.api.nvim_win_get_cursor(0)[1] - 1
   local diags = vim.diagnostic.get(0, { lnum = lnum })
@@ -481,3 +483,13 @@ vim.keymap.set({ 'i', 'v' }, '<C-[>', '<Esc><Cmd>nohlsearch<CR>',
   { noremap = true, silent = true })
 vim.keymap.set('c', '<C-g>', '<Esc>', { noremap = true, silent = true })
 vim.keymap.set('c', '<C-[>', '<Esc>', { noremap = true, silent = true })
+
+if vim.g.neovide == true then
+      vim.keymap.set({'n'}, '<F11>', function()
+        if vim.g.neovide_fullscreen == false then
+              vim.g.neovide_fullscreen = true
+        else
+          vim.g.neovide_fullscreen = false
+        end
+  end, { silent = true })
+end

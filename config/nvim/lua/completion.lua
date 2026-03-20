@@ -18,7 +18,7 @@ cmp.setup({
 
   mapping = cmp.mapping.preset.insert({
     -- Manually trigger the completion menu.
-    ['<C-n>'] = cmp.mapping(cmp.mapping.complete(), { 'i' }),
+    ['<C-n>'] = cmp.mapping(cmp.mapping.complete(), { 'i', 'n' }),
 
     -- Navigate the suggestion list with arrow keys.
     ['<Down>'] = cmp.mapping.select_next_item({ behavior = cmp.SelectBehavior.Select }),
