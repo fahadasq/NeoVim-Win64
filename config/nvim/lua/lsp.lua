@@ -25,6 +25,7 @@ local servers = {
                 { name = "vendor", path = "C:\\Odin\\vendor" },
                 { name = "base",   path = "C:\\Odin\\base" },
             },
+            formatter_type = "indent_tabs",
         },
     },
     lua_ls        = {
@@ -60,7 +61,6 @@ local function on_attach(client, bufnr)
     map('gr',         vim.lsp.buf.references,      'Find references')
     map('gt',         vim.lsp.buf.type_definition, 'Goto type definition')
     map('<C-p>',      vim.lsp.buf.signature_help,  'Signature help')
-    map('<leader>rn', vim.lsp.buf.rename,          'Rename symbol')
     map('<leader>ca', vim.lsp.buf.code_action,     'Code action')
     map('[d',         vim.diagnostic.goto_prev,    'Previous diagnostic')
     map(']d',         vim.diagnostic.goto_next,    'Next diagnostic')
