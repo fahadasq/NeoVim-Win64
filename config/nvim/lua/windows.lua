@@ -98,6 +98,62 @@ vim.keymap.set('n', '<M-Bslash>', function()
   end
 end, { noremap = true, silent = true, desc = 'Horizontal split / recover layout' })
 
+-- ─── Reset layout (Ctrl+Shift+\) ─────────────────────────────────────────────
+--
+-- Closes all windows and recreates the default two-pane + terminal layout.
+
+local function reset_layout()
+  local cur_buf = vim.api.nvim_get_current_buf()
+
+  if cur_buf == terminal.term_buf then
+    cur_buf = nil
+    for _, b in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.api.nvim_buf_is_loaded(b) and b ~= terminal.term_buf
+         and vim.bo[b].buflisted then
+        cur_buf = b ; break
+      end
+    end
+  end
+
+  local keep = vim.api.nvim_get_current_win()
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    if w ~= keep then pcall(vim.api.nvim_win_close, w, true) end
+  end
+
+  if cur_buf and vim.api.nvim_buf_is_valid(cur_buf) then
+    vim.api.nvim_win_set_buf(0, cur_buf)
+  elseif vim.api.nvim_get_current_buf() == terminal.term_buf then
+    vim.cmd('enew')
+  end
+  clear_editor_win_style(vim.api.nvim_get_current_win())
+
+  vim.cmd('vsplit')
+  vim.cmd('wincmd h')
+
+  if terminal.term_buf and vim.api.nvim_buf_is_valid(terminal.term_buf) then
+    vim.cmd('belowright ' .. terminal.SMALL_HEIGHT .. 'split')
+    local tw = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(tw, terminal.term_buf)
+    vim.api.nvim_win_set_height(tw, terminal.SMALL_HEIGHT)
+    terminal.style_term_win(tw)
+    terminal.term_win = tw
+    terminal.expanded = false
+    vim.cmd('wincmd k')
+  end
+
+  terminal.last_editor_win = vim.api.nvim_get_current_win()
+
+  vim.cmd('wincmd =')
+  if terminal.term_win and vim.api.nvim_win_is_valid(terminal.term_win) then
+    vim.api.nvim_win_set_height(terminal.term_win, terminal.SMALL_HEIGHT)
+  end
+end
+
+vim.keymap.set({ 'n', 'v', 'i' }, '<M-0>', reset_layout,
+  { noremap = true, silent = true, desc = 'Reset to default layout' })
+vim.keymap.set('t', '<M-0>', reset_layout,
+  { noremap = true, silent = true, desc = 'Reset to default layout' })
+
 -- ─── Goto definition ─────────────────────────────────────────────────────────
 
 local function other_editor_win()

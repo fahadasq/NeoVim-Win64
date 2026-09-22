@@ -55,10 +55,17 @@ vim.opt.shada = "!,'1000,<50,s10,h"
 vim.api.nvim_create_autocmd({ 'FileType' }, {
   pattern  = '*',
   callback = function()
-    vim.opt_local.expandtab   = true
-    vim.opt_local.shiftwidth  = 4
-    vim.opt_local.tabstop     = 4
-    vim.opt_local.softtabstop = 4
+    if vim.bo.filetype == 'odin' then
+      vim.opt_local.expandtab   = false
+      vim.opt_local.shiftwidth  = 4
+      vim.opt_local.tabstop     = 4
+      vim.opt_local.softtabstop = 0
+    else
+      vim.opt_local.expandtab   = true
+      vim.opt_local.shiftwidth  = 4
+      vim.opt_local.tabstop     = 4
+      vim.opt_local.softtabstop = 4
+    end
     vim.opt_local.formatoptions:remove({ 'c', 'r', 'o' })
   end,
 })

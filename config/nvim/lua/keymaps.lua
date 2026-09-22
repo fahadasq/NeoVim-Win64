@@ -210,7 +210,7 @@ local function delete_current_token()
     else for child in node:iter_children() do find_leaf(child) end end
   end
   find_leaf(tree:root())
-  if target and target:is_named() then
+  if target then
     local sr, sc, er, ec = target:range()
     buf_delete(sr, sc, er, ec)
   else
@@ -420,6 +420,11 @@ vim.keymap.set('n', '<C-_>',  comment_toggle_line,   { noremap = true, silent = 
 vim.keymap.set('v', '<C-/>',  comment_toggle_visual, { noremap = true, silent = true })
 vim.keymap.set('v', '<C-_>',  comment_toggle_visual, { noremap = true, silent = true })
 
+-- ─── LSP rename ──────────────────────────────────────────────────────────────
+
+vim.keymap.set('n', '<M-r>', vim.lsp.buf.rename,
+  { noremap = true, silent = true, desc = 'Rename symbol' })
+
 -- ─── File operations ─────────────────────────────────────────────────────────
 
 vim.keymap.set('n', '<leader>fr', rename_file,
@@ -493,3 +498,43 @@ if vim.g.neovide == true then
         end
   end, { silent = true })
 end
+
+-- ─── Font resizing ──────────────────────────────────────────────────────────
+
+local default_guifont = vim.o.guifont
+
+local function fix_layout_after_font()
+  vim.defer_fn(function()
+    local ok, term = pcall(require, 'terminal')
+    if not ok then return end
+    vim.cmd('wincmd =')
+    if term.term_win and vim.api.nvim_win_is_valid(term.term_win) then
+      if term.expanded then
+        term.LARGE_HEIGHT = math.floor(vim.o.lines * 0.5)
+        vim.api.nvim_win_set_height(term.term_win, term.LARGE_HEIGHT)
+      else
+        vim.api.nvim_win_set_height(term.term_win, term.SMALL_HEIGHT)
+      end
+    end
+  end, 50)
+end
+
+local function change_font_size(delta)
+  local name, size = vim.o.guifont:match('^(.+):h(%d+)')
+  if not name then return end
+  local new_size = math.max(1, tonumber(size) + delta)
+  vim.o.guifont = name .. ':h' .. new_size
+  fix_layout_after_font()
+end
+
+local function reset_font_size()
+  vim.o.guifont = default_guifont
+  fix_layout_after_font()
+end
+
+vim.keymap.set({ 'n', 'v', 'i', 't' }, '<C-=>', function() change_font_size(1) end,
+  { noremap = true, silent = true, desc = 'Increase font size' })
+vim.keymap.set({ 'n', 'v', 'i', 't' }, '<C-->', function() change_font_size(-1) end,
+  { noremap = true, silent = true, desc = 'Decrease font size' })
+vim.keymap.set({ 'n', 'v', 'i', 't' }, '<C-0>', reset_font_size,
+  { noremap = true, silent = true, desc = 'Reset font size' })

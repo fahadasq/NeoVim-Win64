@@ -315,4 +315,6 @@ vim.keymap.set({ 'n', 'v', 'i' }, '<C-S-t>', focus_expand_toggle,
 vim.keymap.set('t', '<C-S-t>', focus_expand_toggle,
   { noremap = true, silent = true, desc = 'Toggle terminal focus + expand' })
 
+M.style_term_win = style_term_win
+
 return M
