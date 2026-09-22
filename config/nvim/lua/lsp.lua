@@ -18,6 +18,15 @@ local servers = {
     pyright       = {},
     clangd        = {},
     gopls         = {},
+    ols           = {
+        init_options = {
+            collections = {
+                { name = "core",   path = "C:\\Odin\\core" },
+                { name = "vendor", path = "C:\\Odin\\vendor" },
+                { name = "base",   path = "C:\\Odin\\base" },
+            },
+        },
+    },
     lua_ls        = {
         settings = {
             Lua = {
