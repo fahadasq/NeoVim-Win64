@@ -70,20 +70,36 @@ local function on_attach(client, bufnr)
             vim.lsp.buf.format({ async = true })
         end, 'Format buffer')
     end
+
+    -- Show the active parameter list in a floating window as you type
+    -- (no virtual text hint, to match the no-inline-clutter diagnostic style).
+    require('lsp_signature').on_attach({
+        bind             = true,
+        hint_enable      = false,
+        floating_window  = true,
+        close_timeout    = 4000,
+        max_height       = 8,
+        max_width        = 60,
+        handler_opts     = { border = 'rounded' },
+    }, bufnr)
 end
 
 require('mason-lspconfig').setup({
-    ensure_installed       = vim.tbl_keys(servers),
-    automatic_installation = true,
-    handlers = {
-        function(server_name)
-            local config        = vim.deepcopy(servers[server_name] or {})
-            config.on_attach    = on_attach
-            config.capabilities = capabilities
-            require('lspconfig')[server_name].setup(config)
-        end,
-    },
+    ensure_installed = vim.tbl_keys(servers),
 })
+
+-- Set up every server directly with vim.lsp.config()/vim.lsp.enable()
+-- (the require('lspconfig')[name].setup() "framework" is deprecated on
+-- Nvim 0.11+ and, on top of that, did not reliably call on_attach for
+-- every installed server here, e.g. ols) — this guarantees on_attach
+-- always runs for every server.
+for server_name, server_config in pairs(servers) do
+    local config        = vim.deepcopy(server_config)
+    config.on_attach    = on_attach
+    config.capabilities = capabilities
+    vim.lsp.config(server_name, config)
+    vim.lsp.enable(server_name)
+end
 
 -- ─── Diagnostic display ──────────────────────────────────────────────────────
 --
