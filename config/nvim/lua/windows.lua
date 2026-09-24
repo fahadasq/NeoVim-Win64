@@ -155,6 +155,19 @@ vim.keymap.set('t', '<M-0>', reset_layout,
   { noremap = true, silent = true, desc = 'Reset to default layout' })
 
 -- ─── Goto definition ─────────────────────────────────────────────────────────
+--
+-- Some servers (e.g. ols on an `import` line, which can resolve to every
+-- file in the imported package) report more than one location, which trips
+-- Neovim's default "multiple results -> quickfix" behaviour. Mirror what
+-- Ctrl+] does for multi-match tags: jump straight to the first match instead
+-- of stopping on a list.
+
+local function goto_definition_on_list(options)
+  local item = options.items[1]
+  if not item then return end
+  vim.cmd('edit ' .. vim.fn.fnameescape(item.filename))
+  vim.api.nvim_win_set_cursor(0, { item.lnum, item.col - 1 })
+end
 
 local function other_editor_win()
   local cur     = vim.api.nvim_get_current_win()
@@ -179,9 +192,9 @@ vim.keymap.set('n', '<C-CR>', function()
   end
   vim.api.nvim_win_set_buf(0, buf)
   vim.api.nvim_win_set_cursor(0, cursor)
-  vim.lsp.buf.definition()
+  vim.lsp.buf.definition({ on_list = goto_definition_on_list })
 end, { noremap = true, silent = true, desc = 'Goto definition in other panel' })
 
 vim.keymap.set('n', '<C-S-CR>', function()
-  vim.lsp.buf.definition()
+  vim.lsp.buf.definition({ on_list = goto_definition_on_list })
 end, { noremap = true, silent = true, desc = 'Goto definition in same panel' })
