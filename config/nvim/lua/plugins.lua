@@ -8,12 +8,12 @@ return {
         lazy = false,
         priority = 1000,
         config = function()
-            vim.cmd('colorscheme gruvbox')
+            -- vim.cmd('colorscheme gruvbox')
         end,
     },
     {
         "alljokecake/naysayer-theme.nvim",
-        lazy = true,
+        lazy = false,
         config = function()
             require('naysayer').setup({
                 variant = 'main',
@@ -24,6 +24,7 @@ return {
                 disable_float_background = true,
                 disable_italics = true,
             })
+            vim.cmd('colorscheme naysayer')
         end,
     },
 

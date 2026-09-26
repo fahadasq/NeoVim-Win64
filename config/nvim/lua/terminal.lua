@@ -15,7 +15,7 @@ M.project_dir       = nil
 -- ─── Appearance ───────────────────────────────────────────────────────────────
 
 local function define_highlights()
-  vim.api.nvim_set_hl(0, 'TermPanelNormal', { bg = '#1e1e1e', fg = '#e0e2ea' })
+  vim.api.nvim_set_hl(0, 'TermPanelNormal', { bg = '#001012', fg = '#e0e2ea' })
 end
 
 local function style_term_win(win)
