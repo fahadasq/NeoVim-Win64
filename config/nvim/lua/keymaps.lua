@@ -365,6 +365,14 @@ vim.keymap.set({ 'n', 'v' }, '<S-h>',   move_token_left,   { noremap = true, sil
 vim.keymap.set({ 'n', 'v' }, '<C-S-l>', '$',               { noremap = true })
 vim.keymap.set({ 'n', 'v' }, '<C-S-h>', '^',               { noremap = true })
 
+-- ─── Jump list ───────────────────────────────────────────────────────────────
+--
+-- <C-i> is claimed by telescope_bindings.lua, so the jump-list forward step
+-- moves to <C-j>; <A-j> takes the backward step normally on <C-o>.
+
+vim.keymap.set('n', '<A-j>', '<C-o>', { noremap = true, silent = true, desc = 'Jump back' })
+vim.keymap.set('n', '<C-j>', '<C-i>', { noremap = true, silent = true, desc = 'Jump forward' })
+
 -- ─── Normal mode deletion ────────────────────────────────────────────────────
 
 vim.keymap.set('n', '<C-d>',    delete_camel_right,   { noremap = true, silent = true })
