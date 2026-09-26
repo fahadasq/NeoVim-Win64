@@ -18,9 +18,15 @@ local function define_highlights()
   vim.api.nvim_set_hl(0, 'TermPanelNormal', { bg = '#001012', fg = '#e0e2ea' })
 end
 
+-- `:colorscheme` runs `hi clear`, which would wipe the group.
+vim.api.nvim_create_autocmd('ColorScheme', { callback = define_highlights })
+
+-- NormalNC is mapped too: the colorscheme gives it bg=NONE, so an unfocused
+-- panel would otherwise lose its background.
 local function style_term_win(win)
   vim.api.nvim_set_option_value('winhl',
-    'Normal:TermPanelNormal,EndOfBuffer:TermPanelNormal', { win = win })
+    'Normal:TermPanelNormal,NormalNC:TermPanelNormal,EndOfBuffer:TermPanelNormal',
+    { win = win })
   vim.api.nvim_set_option_value('number',         false, { win = win })
   vim.api.nvim_set_option_value('relativenumber', false, { win = win })
   vim.api.nvim_set_option_value('signcolumn',     'no',  { win = win })
@@ -54,37 +60,104 @@ end
 
 -- ─── Layout ───────────────────────────────────────────────────────────────────
 
-function M.create_layout()
-  define_highlights()
-  local wins = vim.api.nvim_list_wins()
-  if #wins < 2 then return end
+local function is_float(win)
+  return vim.api.nvim_win_get_config(win).relative ~= ''
+end
 
-  local left_win = nil
-  for _, w in ipairs(wins) do
-    if vim.api.nvim_win_get_position(w)[2] == 0 then
-      left_win = w ; break
+-- Refresh M.term_win: the window currently showing M.term_buf, or nil.
+-- A stale id (window closed, or reused for another buffer) is dropped.
+local function find_term_win()
+  local buf_ok = M.term_buf and vim.api.nvim_buf_is_valid(M.term_buf)
+  if buf_ok and M.term_win and vim.api.nvim_win_is_valid(M.term_win)
+     and vim.api.nvim_win_get_buf(M.term_win) == M.term_buf then
+    return M.term_win
+  end
+  M.term_win = nil
+  if not buf_ok then return nil end
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    if not is_float(w) and vim.api.nvim_win_get_buf(w) == M.term_buf then
+      M.term_win = w ; break
     end
   end
-  if not left_win then left_win = wins[1] end
+  return M.term_win
+end
 
-  local buf = vim.api.nvim_create_buf(false, false)
-  M.term_buf = buf
+-- Split a compact panel under the bottom-most window of the left column —
+-- the same spot the startup layout and Alt+0 use.  Focus is left unchanged.
+-- Returns the new window and the window it was split from.
+local function open_term_win()
+  define_highlights()
+  local host, host_row
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    if not is_float(w) then
+      local pos = vim.api.nvim_win_get_position(w)
+      if pos[2] == 0 and (not host_row or pos[1] > host_row) then
+        host, host_row = w, pos[1]
+      end
+    end
+  end
+  host = host or vim.api.nvim_get_current_win()
 
-  vim.api.nvim_set_current_win(left_win)
+  local prev = vim.api.nvim_get_current_win()
+  vim.api.nvim_set_current_win(host)
   vim.cmd('belowright ' .. M.SMALL_HEIGHT .. 'split')
   local tw = vim.api.nvim_get_current_win()
-  vim.api.nvim_win_set_buf(tw, buf)
   vim.api.nvim_win_set_height(tw, M.SMALL_HEIGHT)
   style_term_win(tw)
+  if vim.api.nvim_win_is_valid(prev) then vim.api.nvim_set_current_win(prev) end
+
   M.term_win = tw
+  M.expanded = false
+  return tw, host
+end
 
-  M.term_chan = vim.fn.termopen(vim.o.shell, {
-    cwd     = vim.fn.getcwd(),
-    on_exit = function() M.term_chan = nil end,
-  })
+-- Start a fresh shell in a new buffer shown in `win`.
+local function start_shell(win)
+  local buf = vim.api.nvim_create_buf(false, false)
+  vim.api.nvim_win_set_buf(win, buf)
+  local chan
+  vim.api.nvim_win_call(win, function()
+    chan = vim.fn.termopen(vim.o.shell, {
+      cwd     = vim.fn.getcwd(),
+      -- Only clear state for this job; an older shell may exit after a restart.
+      on_exit = function(job) if M.term_chan == job then M.term_chan = nil end end,
+    })
+  end)
+  -- termopen() fires TermOpen, and the colorscheme's TermOpen handler
+  -- overwrites 'winhighlight' — re-apply the panel styling afterwards.
+  style_term_win(win)
+  M.term_buf  = buf
+  M.term_chan = chan
+end
 
-  vim.api.nvim_set_current_win(left_win)
-  M.last_editor_win = left_win
+-- Make sure the terminal panel exists and its shell is running, rebuilding
+-- the window and/or shell if either was lost.  Returns true if anything had
+-- to be recovered.
+function M.ensure()
+  local win       = find_term_win()
+  local alive     = M.term_chan ~= nil
+                    and M.term_buf and vim.api.nvim_buf_is_valid(M.term_buf)
+  if win and alive then return false end
+
+  if not win then win = open_term_win() end
+  if not alive then
+    local old = M.term_buf
+    start_shell(win)
+    if old and old ~= M.term_buf and vim.api.nvim_buf_is_valid(old) then
+      pcall(vim.api.nvim_buf_delete, old, { force = true })
+    end
+  else
+    vim.api.nvim_win_set_buf(win, M.term_buf)
+  end
+  return true
+end
+
+function M.create_layout()
+  if #vim.api.nvim_list_wins() < 2 then return end
+  local tw, host = open_term_win()
+  start_shell(tw)
+  vim.api.nvim_set_current_win(host)
+  M.last_editor_win = host
 end
 
 -- ─── Project file ─────────────────────────────────────────────────────────────
@@ -179,16 +252,9 @@ end
 -- ─── Focus toggle (Ctrl+T) ───────────────────────────────────────────────────
 
 local function focus_toggle()
-  if not (M.term_win and vim.api.nvim_win_is_valid(M.term_win)) then
-    for _, w in ipairs(vim.api.nvim_list_wins()) do
-      if vim.api.nvim_win_get_buf(w) == M.term_buf then
-        M.term_win = w ; break
-      end
-    end
-  end
-  if not M.term_win then return end
+  local recovered = M.ensure()
   local cur = vim.api.nvim_get_current_win()
-  if cur == M.term_win then
+  if cur == M.term_win and not recovered then
     local target = M.last_editor_win
     if not (target and vim.api.nvim_win_is_valid(target)) then
       for _, w in ipairs(vim.api.nvim_list_wins()) do
@@ -197,7 +263,7 @@ local function focus_toggle()
     end
     if target then vim.api.nvim_set_current_win(target) end
   else
-    M.last_editor_win = cur
+    if cur ~= M.term_win then M.last_editor_win = cur end
     vim.api.nvim_set_current_win(M.term_win)
     term_scroll_bottom()
     vim.cmd('startinsert')
@@ -212,14 +278,7 @@ vim.keymap.set('t', '<C-t>', focus_toggle,
 -- ─── Height toggle (Home) ────────────────────────────────────────────────────
 
 local function height_toggle()
-  if not (M.term_win and vim.api.nvim_win_is_valid(M.term_win)) then
-    for _, w in ipairs(vim.api.nvim_list_wins()) do
-      if vim.api.nvim_win_get_buf(w) == M.term_buf then
-        M.term_win = w ; break
-      end
-    end
-  end
-  if not M.term_win then return end
+  M.ensure()
   M.LARGE_HEIGHT = math.floor(vim.o.lines * 0.5)
   if M.expanded then
     vim.api.nvim_win_set_height(M.term_win, M.SMALL_HEIGHT)
@@ -239,13 +298,7 @@ vim.keymap.set('t', '<Home>', height_toggle,
 -- ─── Ctrl+, cycles editor windows only ───────────────────────────────────────
 
 local function cycle_editors()
-  if not (M.term_win and vim.api.nvim_win_is_valid(M.term_win)) then
-    for _, w in ipairs(vim.api.nvim_list_wins()) do
-      if vim.api.nvim_win_get_buf(w) == M.term_buf then
-        M.term_win = w ; break
-      end
-    end
-  end
+  find_term_win()
   local cur     = vim.api.nvim_get_current_win()
   local editors = {}
   for _, w in ipairs(vim.api.nvim_list_wins()) do
@@ -275,17 +328,9 @@ vim.keymap.set('t', '<C-,>', cycle_editors,
 -- Focused on editor    →  expand terminal + move focus to terminal
 
 local function focus_expand_toggle()
-  if not (M.term_win and vim.api.nvim_win_is_valid(M.term_win)) then
-    for _, w in ipairs(vim.api.nvim_list_wins()) do
-      if vim.api.nvim_win_get_buf(w) == M.term_buf then
-        M.term_win = w ; break
-      end
-    end
-  end
-  if not M.term_win then return end
-
+  local recovered = M.ensure()
   local cur = vim.api.nvim_get_current_win()
-  if cur == M.term_win then
+  if cur == M.term_win and not recovered then
     -- Collapse and return to editor.
     vim.api.nvim_win_set_height(M.term_win, M.SMALL_HEIGHT)
     M.expanded = false
@@ -298,7 +343,7 @@ local function focus_expand_toggle()
     if target then vim.api.nvim_set_current_win(target) end
   else
     -- Expand and focus terminal.
-    M.last_editor_win = cur
+    if cur ~= M.term_win then M.last_editor_win = cur end
     M.LARGE_HEIGHT = math.floor(vim.o.lines * 0.5)
     if not M.expanded then
       vim.api.nvim_win_set_height(M.term_win, M.LARGE_HEIGHT)

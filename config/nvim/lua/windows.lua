@@ -130,16 +130,9 @@ local function reset_layout()
   vim.cmd('vsplit')
   vim.cmd('wincmd h')
 
-  if terminal.term_buf and vim.api.nvim_buf_is_valid(terminal.term_buf) then
-    vim.cmd('belowright ' .. terminal.SMALL_HEIGHT .. 'split')
-    local tw = vim.api.nvim_get_current_win()
-    vim.api.nvim_win_set_buf(tw, terminal.term_buf)
-    vim.api.nvim_win_set_height(tw, terminal.SMALL_HEIGHT)
-    terminal.style_term_win(tw)
-    terminal.term_win = tw
-    terminal.expanded = false
-    vim.cmd('wincmd k')
-  end
+  -- Re-open the terminal panel under the left column (restarting the shell
+  -- if it exited).  Focus stays on the left editor.
+  terminal.ensure()
 
   terminal.last_editor_win = vim.api.nvim_get_current_win()
 
