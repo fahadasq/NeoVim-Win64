@@ -516,13 +516,11 @@ local function fix_layout_after_font()
     local ok, term = pcall(require, 'terminal')
     if not ok then return end
     vim.cmd('wincmd =')
-    if term.term_win and vim.api.nvim_win_is_valid(term.term_win) then
-      if term.expanded then
-        term.LARGE_HEIGHT = math.floor(vim.o.lines * 0.5)
-        vim.api.nvim_win_set_height(term.term_win, term.LARGE_HEIGHT)
-      else
-        vim.api.nvim_win_set_height(term.term_win, term.SMALL_HEIGHT)
-      end
+    if term.expanded then
+      term.LARGE_HEIGHT = math.floor(vim.o.lines * 0.5)
+      term.set_height(term.LARGE_HEIGHT)
+    else
+      term.set_height(term.SMALL_HEIGHT)
     end
   end, 50)
 end

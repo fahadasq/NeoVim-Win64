@@ -50,6 +50,27 @@ local function term_scroll_bottom()
   end
 end
 
+-- ─── Height ───────────────────────────────────────────────────────────────────
+--
+-- A panel with no window above or below it (e.g. side-by-side with an editor)
+-- spans the full height; resizing it can only take rows from or give rows to
+-- the command line, which balloons 'cmdheight'.  Skip resizing in that case.
+
+local function has_vertical_neighbor(win)
+  return vim.api.nvim_win_call(win, function()
+    local nr = vim.fn.winnr()
+    return vim.fn.winnr('j') ~= nr or vim.fn.winnr('k') ~= nr
+  end)
+end
+
+-- Resize the panel if it can be resized.  Returns true if it was.
+function M.set_height(h)
+  if not (M.term_win and vim.api.nvim_win_is_valid(M.term_win)) then return false end
+  if not has_vertical_neighbor(M.term_win) then return false end
+  vim.api.nvim_win_set_height(M.term_win, h)
+  return true
+end
+
 -- ─── Send raw text to the shell ───────────────────────────────────────────────
 
 local function term_send(text)
@@ -280,13 +301,9 @@ vim.keymap.set('t', '<C-t>', focus_toggle,
 local function height_toggle()
   M.ensure()
   M.LARGE_HEIGHT = math.floor(vim.o.lines * 0.5)
-  if M.expanded then
-    vim.api.nvim_win_set_height(M.term_win, M.SMALL_HEIGHT)
-    M.expanded = false
-  else
-    vim.api.nvim_win_set_height(M.term_win, M.LARGE_HEIGHT)
-    M.expanded = true
-  end
+  local h = M.expanded and M.SMALL_HEIGHT or M.LARGE_HEIGHT
+  if not M.set_height(h) then return end
+  M.expanded = not M.expanded
   vim.defer_fn(term_scroll_bottom, 30)
 end
 
@@ -332,8 +349,7 @@ local function focus_expand_toggle()
   local cur = vim.api.nvim_get_current_win()
   if cur == M.term_win and not recovered then
     -- Collapse and return to editor.
-    vim.api.nvim_win_set_height(M.term_win, M.SMALL_HEIGHT)
-    M.expanded = false
+    if M.set_height(M.SMALL_HEIGHT) then M.expanded = false end
     local target = M.last_editor_win
     if not (target and vim.api.nvim_win_is_valid(target)) then
       for _, w in ipairs(vim.api.nvim_list_wins()) do
@@ -345,8 +361,7 @@ local function focus_expand_toggle()
     -- Expand and focus terminal.
     if cur ~= M.term_win then M.last_editor_win = cur end
     M.LARGE_HEIGHT = math.floor(vim.o.lines * 0.5)
-    if not M.expanded then
-      vim.api.nvim_win_set_height(M.term_win, M.LARGE_HEIGHT)
+    if not M.expanded and M.set_height(M.LARGE_HEIGHT) then
       M.expanded = true
     end
     vim.api.nvim_set_current_win(M.term_win)

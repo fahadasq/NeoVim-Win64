@@ -80,9 +80,7 @@ vim.keymap.set('n', '<M-Bslash>', function()
     vim.cmd('aboveleft split')
     local new_win = vim.api.nvim_get_current_win()
     -- Reset terminal to compact height.
-    if terminal.term_win and vim.api.nvim_win_is_valid(terminal.term_win) then
-      vim.api.nvim_win_set_height(terminal.term_win, terminal.SMALL_HEIGHT)
-    end
+    terminal.set_height(terminal.SMALL_HEIGHT)
     terminal.expanded = false
     terminal.last_editor_win = new_win
     -- Replace terminal buffer if the new window inherited it.
@@ -137,9 +135,7 @@ local function reset_layout()
   terminal.last_editor_win = vim.api.nvim_get_current_win()
 
   vim.cmd('wincmd =')
-  if terminal.term_win and vim.api.nvim_win_is_valid(terminal.term_win) then
-    vim.api.nvim_win_set_height(terminal.term_win, terminal.SMALL_HEIGHT)
-  end
+  terminal.set_height(terminal.SMALL_HEIGHT)
 end
 
 vim.keymap.set({ 'n', 'v', 'i' }, '<M-0>', reset_layout,
