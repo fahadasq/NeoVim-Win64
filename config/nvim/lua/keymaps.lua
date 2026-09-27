@@ -26,16 +26,22 @@ local function is_boundary(line, i)
   return false
 end
 
-local function next_boundary(line, ccol)
+-- '_' directly followed by a word char: movement treats the pair as one stop
+-- (forward lands on the '_', backward lands on the word char).
+local function is_joint(line, i)
+  return line:sub(i + 1, i + 2):match('^_%w$') ~= nil
+end
+
+local function next_boundary(line, ccol, skip_joint)
   for i = ccol + 1, #line - 1 do
-    if is_boundary(line, i) then return i end
+    if is_boundary(line, i) and not (skip_joint and is_joint(line, i - 1)) then return i end
   end
   return nil
 end
 
-local function prev_boundary(line, ccol)
+local function prev_boundary(line, ccol, skip_joint)
   for i = ccol - 1, 0, -1 do
-    if is_boundary(line, i) then return i end
+    if is_boundary(line, i) and not (skip_joint and is_joint(line, i)) then return i end
   end
   return nil
 end
@@ -45,7 +51,7 @@ end
 local function move_camel_right()
   local crow, ccol = unpack(vim.api.nvim_win_get_cursor(0))
   local line = vim.api.nvim_buf_get_lines(0, crow - 1, crow, false)[1]
-  local b = next_boundary(line, ccol)
+  local b = next_boundary(line, ccol, true)
   if b ~= nil then
     vim.api.nvim_win_set_cursor(0, { crow, b })
   elseif crow < vim.api.nvim_buf_line_count(0) then
@@ -58,7 +64,7 @@ end
 local function move_camel_left()
   local crow, ccol = unpack(vim.api.nvim_win_get_cursor(0))
   local line = vim.api.nvim_buf_get_lines(0, crow - 1, crow, false)[1]
-  local b = prev_boundary(line, ccol)
+  local b = prev_boundary(line, ccol, true)
   if b ~= nil then
     vim.api.nvim_win_set_cursor(0, { crow, b })
   elseif ccol > 0 then
