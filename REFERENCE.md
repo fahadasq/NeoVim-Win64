@@ -35,9 +35,22 @@ The terminal panel starts at 6 lines tall and can be expanded.
 `camel|Case`), digits touching letters (`foo42bar` → `foo|42|bar`), and
 punctuation/symbols.
 
+**Underscores:** when moving with `Ctrl+L` / `Ctrl+H`, an `_` directly followed
+by a letter or digit is treated as a single stop — moving right lands on the
+`_`, moving left lands on the character after it (so `snake_case` doesn't take
+two presses to cross the `_c`).  Deletion (`Ctrl+D` / `Ctrl+Backspace`) is not
+affected and still stops at both.
+
 **Treesitter tokens** use the syntax tree to jump between leaf nodes (keywords,
 identifiers, operators, literals).  If no treesitter parser is available, it
 falls back to camel-case movement.
+
+### Jump list (Normal mode)
+
+| Key | Action |
+|-----|--------|
+| `Alt+J` | Jump **back** in the jump list (replaces `Ctrl+O`) |
+| `Ctrl+J` | Jump **forward** in the jump list (replaces `Ctrl+I`, which opens the buffer picker) |
 
 ### Scrolling
 
@@ -89,7 +102,7 @@ falls back to camel-case movement.
 
 | Key | Action |
 |-----|--------|
-| `Ctrl+S` | **Save** file (creates missing directories with confirmation) |
+| `Ctrl+S` | **Save** file (creates missing directories with confirmation) — Normal, Insert, Visual |
 | `Ctrl+C` | **Copy** selection to system clipboard (Visual mode) |
 | `Ctrl+V` | **Paste** from system clipboard (Insert mode) |
 | `Alt+W` | Toggle **word wrap** on/off |
@@ -109,14 +122,11 @@ The `<leader>` key is `\` by default (Neovim default; not remapped here).
 
 ## 5. Escape & Float Dismissal
 
-All of these do the same thing: dismiss floating windows (diagnostics, hover)
-and clear search highlighting.
-
-| Key | Mode |
-|-----|------|
-| `Esc` | Normal |
-| `Ctrl+G` | Normal, Insert, Visual, Command |
-| `Ctrl+[` | Normal, Insert, Visual, Command |
+| Key | Mode | Action |
+|-----|------|--------|
+| `Esc` / `Ctrl+G` / `Ctrl+[` | Normal | Dismiss floating windows (diagnostics, hover) and clear search highlighting |
+| `Ctrl+G` / `Ctrl+[` | Insert, Visual | Return to Normal mode and clear search highlighting |
+| `Ctrl+G` / `Ctrl+[` | Command | Cancel the command line (same as `Esc`) |
 
 ---
 
@@ -135,7 +145,7 @@ and clear search highlighting.
 |-----|--------|
 | `Ctrl+K` | **Kill buffer** — closes the current buffer (won't close terminal) |
 | `Ctrl+Shift+K` | **Close window** — with confirmation (won't close terminal) |
-| `Alt+0` | **Reset layout** — closes all windows and recreates the default two 50/50 editor panes + terminal panel |
+| `Alt+0` | **Reset layout** — keeps the current window (or the last editor, if on the terminal), closes the rest, and recreates the default two 50/50 editor panes + compact terminal panel under the left one (restarting the shell if it had exited) |
 | `Alt+1` | **Single + terminal layout** — keeps only the current window (or the last editor, if on the terminal) with the compact terminal panel below it |
 | `Alt+2` | **Single window layout** — keeps only the current window (or the last editor, if on the terminal); the terminal is hidden but its shell keeps running (`Ctrl+T` brings it back) |
 
@@ -151,11 +161,19 @@ and clear search highlighting.
 |-----|--------|
 | `Ctrl+T` | **Toggle focus** between terminal and last editor |
 | `Ctrl+Shift+T` | **Toggle focus + expand**: from editor → expand terminal and focus it; from terminal → collapse and return to editor |
-| `Home` | **Toggle terminal height** between compact (6 lines) and expanded (~50% of screen) |
+| `Home` | **Toggle terminal height** between compact (6 lines) and expanded (~50% of screen) — Normal, Visual, Terminal |
 
 When focusing the terminal, it auto-scrolls to the bottom and enters
 **Terminal mode** (Insert mode for the shell).  Use `Ctrl+T` or `Ctrl+Shift+T`
 to leave terminal mode and return to an editor.
+
+**Recovery:** if the terminal window was closed (e.g. by `Alt+2`) or the shell
+exited, `Ctrl+T`, `Ctrl+Shift+T`, and `Home` re-open the panel under the left
+column and start a fresh shell as needed.  The first press after a recovery
+focuses the terminal rather than toggling away from it.
+
+Height changes are skipped when the terminal has no window above or below it
+(e.g. when it sits side-by-side with an editor).
 
 ---
 
@@ -175,6 +193,11 @@ gutter signs.  Press `Ctrl+M` to see the full message.
 
 All LSP floats are non-focusable: the cursor never gets trapped in them.
 
+**Automatic signature help** (`lsp_signature.nvim`): while typing function
+arguments, a bordered float shows the parameter list with the active parameter
+highlighted.  It closes after 4 s of inactivity; no inline virtual-text hint is
+shown.
+
 ### Go-to commands
 
 | Key | Action |
@@ -186,6 +209,10 @@ All LSP floats are non-focusable: the cursor never gets trapped in them.
 | `gt` | Go to **type definition** |
 | `Ctrl+Enter` | Go to **definition in the other editor panel** (splits if needed) |
 | `Ctrl+Shift+Enter` | Go to **definition in same panel** |
+
+When the server returns several definitions (e.g. `ols` on an `import` line),
+`Ctrl+Enter` and `Ctrl+Shift+Enter` jump straight to the first match instead of
+opening a quickfix list.
 
 ### Refactoring
 
@@ -215,15 +242,16 @@ Completion is **manual only** — no popup while typing.
 | Key | Action |
 |-----|--------|
 | `Ctrl+Shift+I` | **Find files** (respects `.nvimproject` blacklist) |
-| `Ctrl+I` | **Browse open buffers** (sorted by most recently used) |
+| `Ctrl+I` | **Browse open buffers** (sorted by most recently used, current buffer excluded) |
 | `Alt+F` | **Live grep** (search file contents) |
-| `Ctrl+Shift+F` | **File browser** (directory tree at current file's location) |
+| `Ctrl+Shift+F` | **File browser** (directory tree at current file's location, or CWD; hidden files shown, `.gitignore` not respected) |
 
 ### Inside Telescope
 
 | Key | Action |
 |-----|--------|
-| `Esc` / `Ctrl+G` / `Ctrl+[` / `Ctrl+C` | Close picker |
+| `Esc` / `Ctrl+G` / `Ctrl+[` | Close picker |
+| `Ctrl+C` | Close picker (prompt/Insert mode only) |
 | `Ctrl+R` | (File browser only) **Switch drive/path** — prompts for a new root |
 
 Default ignore patterns: `node_modules/`, `.git/`, `*.lock`, `__pycache__/`,
@@ -286,8 +314,11 @@ return {
   Insert, and Terminal).
 - Pressing the key sends the command to the terminal panel: it clears the
   screen, `cd`s to the project directory, and runs the command.
-- `F6` is reserved: `Ctrl+F6` always sends **Ctrl+C** (interrupt) to the
-  terminal, useful for stopping a running process.
+- `F6` is reserved: once a `.nvimproject` is loaded, `Ctrl+F6` sends
+  **Ctrl+C** (interrupt) to the terminal in all modes, useful for stopping a
+  running process.  An `F6` entry in the file is ignored.
+- If the shell is not running, the command is not sent and a warning is shown
+  (`Ctrl+T` restarts it).
 
 ### Blacklist patterns
 
@@ -313,14 +344,15 @@ The `blacklist_patterns` array uses Lua patterns (not globs).  They are
 
 | Setting | Value |
 |---------|-------|
-| Indentation | 4 spaces (enforced on all filetypes) |
+| Indentation | 4 spaces (enforced on all filetypes except Odin, which uses tabs at width 4) |
 | Word wrap | Off by default (toggle with `Alt+W`) |
 | Line numbers | Relative + absolute |
 | Clipboard | System clipboard (`unnamedplus`) |
 | Search | Incremental + highlight (clear with `Esc`) |
 | Comment continuation | Disabled (Enter in a comment does not auto-insert `//`, `#`, etc.) |
 | Font | JetBrains Mono, size 10 |
-| Colorscheme | Gruvbox |
+| Colorscheme | Naysayer (Gruvbox is installed but not active) |
+| Terminal panel | Dark teal background (`#001012`) to set it apart from editors |
 | Horizontal scroll | Smooth (`sidescroll=1`, 8-column margin) |
 | Shada (history) | Remembers 1000 files of marks/history |
 
@@ -330,10 +362,14 @@ The `blacklist_patterns` array uses Lua patterns (not globs).  They are
 
 | Key | Action |
 |-----|--------|
-| `F11` | Toggle **fullscreen** |
+| `F11` | Toggle **fullscreen** (Normal mode) |
 | `Ctrl+=` | **Increase** font size by 1 |
 | `Ctrl+-` | **Decrease** font size by 1 |
 | `Ctrl+0` | **Reset** font size to default (10) |
+
+The font-size keys work in Normal, Visual, Insert, and Terminal mode, and
+re-balance the window layout (keeping the terminal's compact/expanded state)
+after resizing.
 
 Neovide settings:
 - Cursor animation: 75ms
@@ -355,4 +391,5 @@ These are auto-installed via Mason on first launch:
 | `pyright` | Python |
 | `clangd` | C / C++ |
 | `gopls` | Go |
+| `ols` | Odin (collections `core`, `vendor`, `base` from `C:\Odin`; formats with tabs) |
 | `lua_ls` | Lua |
