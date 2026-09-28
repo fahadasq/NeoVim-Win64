@@ -96,34 +96,58 @@ vim.keymap.set('n', '<M-Bslash>', function()
   end
 end, { noremap = true, silent = true, desc = 'Horizontal split / recover layout' })
 
--- ─── Reset layout (Ctrl+Shift+\) ─────────────────────────────────────────────
+-- ─── Layout presets (Alt+0 / Alt+1 / Alt+2) ──────────────────────────────────
 --
--- Closes all windows and recreates the default two-pane + terminal layout.
+-- Every preset starts by collapsing to a single editor window built from the
+-- window the cursor is on (keeping its buffer, cursor and view).  From the
+-- terminal panel, the last editor window is used instead, or any other
+-- editor window, or failing that the terminal window itself is reused with
+-- some other listed buffer.
 
-local function reset_layout()
-  local cur_buf = vim.api.nvim_get_current_buf()
+local function is_editor_win(w)
+  return vim.api.nvim_win_is_valid(w)
+     and vim.api.nvim_win_get_config(w).relative == ''
+     and vim.api.nvim_win_get_buf(w) ~= terminal.term_buf
+end
 
-  if cur_buf == terminal.term_buf then
-    cur_buf = nil
+local function pick_editor_win()
+  local cur = vim.api.nvim_get_current_win()
+  if is_editor_win(cur) then return cur end
+  local last = terminal.last_editor_win
+  if last and is_editor_win(last) then return last end
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    if is_editor_win(w) then return w end
+  end
+end
+
+local function collapse_to_single_window()
+  local keep = pick_editor_win()
+
+  if keep then
+    vim.api.nvim_set_current_win(keep)
+  else
+    keep = vim.api.nvim_get_current_win()
+    local alt
     for _, b in ipairs(vim.api.nvim_list_bufs()) do
       if vim.api.nvim_buf_is_loaded(b) and b ~= terminal.term_buf
          and vim.bo[b].buflisted then
-        cur_buf = b ; break
+        alt = b ; break
       end
     end
+    if alt then vim.api.nvim_win_set_buf(keep, alt) else vim.cmd('enew') end
   end
 
-  local keep = vim.api.nvim_get_current_win()
   for _, w in ipairs(vim.api.nvim_list_wins()) do
     if w ~= keep then pcall(vim.api.nvim_win_close, w, true) end
   end
 
-  if cur_buf and vim.api.nvim_buf_is_valid(cur_buf) then
-    vim.api.nvim_win_set_buf(0, cur_buf)
-  elseif vim.api.nvim_get_current_buf() == terminal.term_buf then
-    vim.cmd('enew')
-  end
-  clear_editor_win_style(vim.api.nvim_get_current_win())
+  clear_editor_win_style(keep)
+  terminal.last_editor_win = keep
+end
+
+-- Alt+0: two side-by-side editors, terminal under the left one.
+local function reset_layout()
+  collapse_to_single_window()
 
   vim.cmd('vsplit')
   vim.cmd('wincmd h')
@@ -142,6 +166,26 @@ vim.keymap.set({ 'n', 'v', 'i' }, '<M-0>', reset_layout,
   { noremap = true, silent = true, desc = 'Reset to default layout' })
 vim.keymap.set('t', '<M-0>', reset_layout,
   { noremap = true, silent = true, desc = 'Reset to default layout' })
+
+-- Alt+1: one editor with the compact terminal panel under it.
+local function single_with_terminal_layout()
+  collapse_to_single_window()
+  local editor = vim.api.nvim_get_current_win()
+
+  terminal.ensure()
+
+  vim.api.nvim_set_current_win(editor)
+  terminal.set_height(terminal.SMALL_HEIGHT)
+  terminal.expanded = false
+end
+
+vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-1>', single_with_terminal_layout,
+  { noremap = true, silent = true, desc = 'Layout: 1 window + terminal' })
+
+-- Alt+2: one editor, no terminal.  The shell keeps running in its hidden
+-- buffer; Ctrl+T / Ctrl+Shift+T / Home bring the panel back.
+vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-2>', collapse_to_single_window,
+  { noremap = true, silent = true, desc = 'Layout: 1 window, no terminal' })
 
 -- ─── Goto definition ─────────────────────────────────────────────────────────
 --

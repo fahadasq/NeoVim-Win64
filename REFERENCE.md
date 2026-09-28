@@ -136,6 +136,8 @@ and clear search highlighting.
 | `Ctrl+K` | **Kill buffer** — closes the current buffer (won't close terminal) |
 | `Ctrl+Shift+K` | **Close window** — with confirmation (won't close terminal) |
 | `Alt+0` | **Reset layout** — closes all windows and recreates the default two 50/50 editor panes + terminal panel |
+| `Alt+1` | **Single + terminal layout** — keeps only the current window (or the last editor, if on the terminal) with the compact terminal panel below it |
+| `Alt+2` | **Single window layout** — keeps only the current window (or the last editor, if on the terminal); the terminal is hidden but its shell keeps running (`Ctrl+T` brings it back) |
 
 ### Cycling
 
