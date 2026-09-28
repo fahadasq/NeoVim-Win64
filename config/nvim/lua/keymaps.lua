@@ -305,7 +305,7 @@ end
 local function toggle_wrap()
   local w = vim.api.nvim_get_option_value('wrap', { win = 0 })
   vim.api.nvim_set_option_value('wrap', not w, { win = 0 })
-  vim.notify('Word wrap ' .. (not w and 'OFF' or 'ON'), vim.log.levels.INFO)
+  vim.notify('Word wrap ' .. (not w and 'ON' or 'OFF'), vim.log.levels.INFO)
 end
 
 -- ─── Comment toggle ──────────────────────────────────────────────────────────
