@@ -11,6 +11,7 @@ nvim-win64/                   ← repo root
 ├── nvim.bat                  ← launcher: sets XDG vars, starts Neovide+Nvim
 ├── neovide.exe               ← Neovide GUI binary
 ├── nvim/bin/                 ← Neovim binary + support DLLs (nvim.exe, win32yank, etc.)
+├── ols/                      ← patched OLS build (ols.exe + builtin/) used instead of Mason's; see build-tags-fix.patch
 ├── config/nvim/              ← XDG_CONFIG_HOME/nvim  (the Neovim config)
 │   ├── init.lua              ← entry point: bootstraps lazy.nvim, loads modules
 │   ├── lazy-lock.json        ← plugin lock file (lazy.nvim)
@@ -62,7 +63,15 @@ tree portable — move the folder and everything still works.
 
 ## LSP servers (auto-installed via Mason)
 
-`ts_ls`, `eslint`, `cssls`, `html`, `pyright`, `clangd`, `gopls`, `lua_ls`
+`ts_ls`, `eslint`, `cssls`, `html`, `pyright`, `clangd`, `gopls`, `lua_ls`, `ols`
+
+`ols` is still installed by Mason, but `lsp.lua` points its `cmd` at the
+patched `ols/ols.exe`.  Upstream OLS (nightly-2026-09-20) ORs separate
+`#+build` lines instead of ANDing them, so `_other.odin` files such as
+`core:time`'s `time_other.odin` get indexed on Windows and goto-definition
+jumps there instead of the `_windows.odin` version.  To rebuild on a newer OLS:
+apply `ols/build-tags-fix.patch` to the OLS source and run `build.bat` (or
+drop the `cmd` override once upstream has the fix).
 
 ## Key architecture decisions
 

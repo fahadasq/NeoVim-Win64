@@ -10,6 +10,9 @@ require('mason').setup({
     },
 })
 
+-- Repo root: nvim.bat points XDG_CONFIG_HOME at <root>/config.
+local portable_root = vim.fn.fnamemodify(vim.fn.stdpath('config'), ':h:h')
+
 local servers = {
     ts_ls         = {},
     eslint        = {},
@@ -19,6 +22,12 @@ local servers = {
     clangd        = {},
     gopls         = {},
     ols           = {
+        -- Patched OLS build (ols/build-tags-fix.patch) instead of Mason's:
+        -- upstream ORs separate `#+build` lines instead of ANDing them, so
+        -- files like core:time's time_other.odin (`#+build !linux`,
+        -- `#+build !windows`, ...) get indexed on Windows and shadow the
+        -- _windows.odin definitions.  Remove `cmd` once upstream is fixed.
+        cmd = { portable_root .. '/ols/ols.exe' },
         init_options = {
             collections = {
                 { name = "core",   path = "C:\\Odin\\core" },

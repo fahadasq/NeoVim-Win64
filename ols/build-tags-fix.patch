@@ -1,0 +1,39 @@
+diff --git a/src/server/build.odin b/src/server/build.odin
+index b98d014..8143b14 100644
+--- a/src/server/build.odin
++++ b/src/server/build.odin
+@@ -166,14 +166,29 @@ should_collect_file :: proc(file_tags: parser.File_Tags) -> bool {
+ 		if when_expr, ok := resolve_when_ident(when_expr_map, "ODIN_OS"); ok {
+ 			if s, ok := when_expr.(string); ok {
+ 				if used_os, ok := os_string_to_enum[when_expr.(string)]; ok {
+-					found := false
++					// Only filter on the architecture when we know it.
++					used_arch := runtime.Odin_Arch_Type.Unknown
++					if arch_expr, ok := resolve_when_ident(when_expr_map, "ODIN_ARCH"); ok {
++						if arch_str, ok := arch_expr.(string); ok {
++							used_arch = parser.get_build_arch_from_string(arch_str)
++						}
++					}
++
++					// Comma separated kinds on one build line are OR'ed, but separate build lines
++					// (delimited by BUILD_KIND_NEWLINE_MARKER) are AND'ed, e.g.
++					// `#+build !linux` followed by `#+build !windows` excludes both.
++					line_matches := false
+ 					for tag in file_tags.build {
+-						if used_os in tag.os {
+-							found = true
+-							break
++						if tag == parser.BUILD_KIND_NEWLINE_MARKER {
++							if !line_matches {
++								return false
++							}
++							line_matches = false
++						} else if used_os in tag.os && (used_arch == .Unknown || used_arch in tag.arch) {
++							line_matches = true
+ 						}
+ 					}
+-					if !found {
++					if !line_matches {
+ 						return false
+ 					}
+ 				}
