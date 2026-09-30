@@ -145,27 +145,10 @@ local function collapse_to_single_window()
   terminal.last_editor_win = keep
 end
 
--- Alt+0: two side-by-side editors, terminal under the left one.
-local function reset_layout()
-  collapse_to_single_window()
-
-  vim.cmd('vsplit')
-  vim.cmd('wincmd h')
-
-  -- Re-open the terminal panel under the left column (restarting the shell
-  -- if it exited).  Focus stays on the left editor.
-  terminal.ensure()
-
-  terminal.last_editor_win = vim.api.nvim_get_current_win()
-
-  vim.cmd('wincmd =')
-  terminal.set_height(terminal.SMALL_HEIGHT)
-end
-
-vim.keymap.set({ 'n', 'v', 'i' }, '<M-0>', reset_layout,
-  { noremap = true, silent = true, desc = 'Reset to default layout' })
-vim.keymap.set('t', '<M-0>', reset_layout,
-  { noremap = true, silent = true, desc = 'Reset to default layout' })
+-- Alt+0: one editor, no terminal.  The shell keeps running in its hidden
+-- buffer; Ctrl+T / Ctrl+Shift+T / Home bring the panel back.
+vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-0>', collapse_to_single_window,
+  { noremap = true, silent = true, desc = 'Layout: 1 window, no terminal' })
 
 -- Alt+1: one editor with the compact terminal panel under it.
 local function single_with_terminal_layout()
@@ -182,10 +165,26 @@ end
 vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-1>', single_with_terminal_layout,
   { noremap = true, silent = true, desc = 'Layout: 1 window + terminal' })
 
--- Alt+2: one editor, no terminal.  The shell keeps running in its hidden
--- buffer; Ctrl+T / Ctrl+Shift+T / Home bring the panel back.
-vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-2>', collapse_to_single_window,
-  { noremap = true, silent = true, desc = 'Layout: 1 window, no terminal' })
+-- Alt+2: two side-by-side editors, terminal under the left one (the
+-- default startup layout).
+local function two_with_terminal_layout()
+  collapse_to_single_window()
+
+  vim.cmd('vsplit')
+  vim.cmd('wincmd h')
+
+  -- Re-open the terminal panel under the left column (restarting the shell
+  -- if it exited).  Focus stays on the left editor.
+  terminal.ensure()
+
+  terminal.last_editor_win = vim.api.nvim_get_current_win()
+
+  vim.cmd('wincmd =')
+  terminal.set_height(terminal.SMALL_HEIGHT)
+end
+
+vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-2>', two_with_terminal_layout,
+  { noremap = true, silent = true, desc = 'Layout: 2 windows + terminal' })
 
 -- ─── Goto definition ─────────────────────────────────────────────────────────
 --
