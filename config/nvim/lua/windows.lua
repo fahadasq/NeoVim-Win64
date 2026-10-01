@@ -71,7 +71,6 @@ local function clear_editor_win_style(win)
   vim.api.nvim_set_option_value('relativenumber', true,   { win = win })
   vim.api.nvim_set_option_value('signcolumn',     'yes',  { win = win })
   vim.api.nvim_set_option_value('wrap',           false,  { win = win })
-  vim.api.nvim_set_option_value('cursorline',     false,  { win = win })
 end
 
 vim.keymap.set('n', '<M-Bslash>', function()

@@ -41,6 +41,20 @@ vim.opt.sidescrolloff = 8
 vim.opt.hlsearch  = true
 vim.opt.incsearch = true
 
+-- ─── Cursorline only in the focused editor window ────────────────────────────
+-- Editor window = normal file buffer (buftype '') in a non-floating window, so
+-- the terminal panel and Telescope/other popups never get a cursorline.
+
+vim.api.nvim_create_autocmd({ 'VimEnter', 'WinEnter', 'BufWinEnter', 'TermOpen' }, {
+  callback = function()
+    vim.wo.cursorline = vim.bo.buftype == ''
+      and vim.api.nvim_win_get_config(0).relative == ''
+  end,
+})
+vim.api.nvim_create_autocmd('WinLeave', {
+  callback = function() vim.wo.cursorline = false end,
+})
+
 -- ─── Shada / MRU ─────────────────────────────────────────────────────────────
 
 vim.opt.shada = "!,'1000,<50,s10,h"

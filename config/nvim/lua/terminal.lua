@@ -31,6 +31,7 @@ local function style_term_win(win)
   vim.api.nvim_set_option_value('relativenumber', false, { win = win })
   vim.api.nvim_set_option_value('signcolumn',     'no',  { win = win })
   vim.api.nvim_set_option_value('wrap',           false, { win = win })
+  vim.api.nvim_set_option_value('cursorline',     false, { win = win })
 end
 
 -- ─── Scroll helpers ───────────────────────────────────────────────────────────
