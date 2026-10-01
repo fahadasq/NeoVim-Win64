@@ -37,6 +37,20 @@ return {
         opts = {},
     },
 
+    -- ─── Reference highlighting ────────────────────────────────────────────────
+    -- Highlights other uses of the word under the cursor (LSP → treesitter →
+    -- regex).  Shift+J / Shift+K jump between them; see keymaps.lua.
+    {
+        'RRethy/vim-illuminate',
+        lazy   = false,
+        config = function()
+            require('illuminate').configure({
+                providers = { 'lsp', 'treesitter', 'regex' },
+                delay     = 100,
+            })
+        end,
+    },
+
     -- ─── Telescope ─────────────────────────────────────────────────────────────
     {
         'nvim-telescope/telescope.nvim',

@@ -371,6 +371,17 @@ vim.keymap.set({ 'n', 'v' }, '<S-h>',   move_token_left,   { noremap = true, sil
 vim.keymap.set({ 'n', 'v' }, '<C-S-l>', '$',               { noremap = true })
 vim.keymap.set({ 'n', 'v' }, '<C-S-h>', '^',               { noremap = true })
 
+-- ─── Reference jumping (vim-illuminate) ──────────────────────────────────────
+--
+-- <S-j>  →  next occurrence of the word under the cursor
+-- <S-k>  →  previous occurrence
+-- Both stop at the last/first occurrence instead of wrapping around.
+
+vim.keymap.set('n', '<S-j>', function() require('illuminate').goto_next_reference(false) end,
+  { noremap = true, silent = true, desc = 'Next reference' })
+vim.keymap.set('n', '<S-k>', function() require('illuminate').goto_prev_reference(false) end,
+  { noremap = true, silent = true, desc = 'Previous reference' })
+
 -- ─── Jump list ───────────────────────────────────────────────────────────────
 --
 -- <C-i> is claimed by telescope_bindings.lua, so the jump-list forward step

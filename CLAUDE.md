@@ -53,6 +53,7 @@ tree portable — move the folder and everything still works.
 |--------|---------|
 | `rafamadriz/gruvbox` | Gruvbox colorscheme |
 | `lukas-reineke/indent-blankline.nvim` | Indent guide lines |
+| `RRethy/vim-illuminate` | Highlight references of word under cursor; Shift+J/K jump (no wrap) |
 | `nvim-telescope/telescope.nvim` | Fuzzy finder (files, buffers, grep) |
 | `nvim-telescope/telescope-file-browser.nvim` | Directory browser in Telescope |
 | `numToStr/Comment.nvim` | Comment toggling |
