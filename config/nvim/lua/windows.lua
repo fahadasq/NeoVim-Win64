@@ -95,7 +95,7 @@ vim.keymap.set('n', '<M-Bslash>', function()
   end
 end, { noremap = true, silent = true, desc = 'Horizontal split / recover layout' })
 
--- ─── Layout presets (Alt+0 / Alt+1 / Alt+2) ──────────────────────────────────
+-- ─── Layout presets (Alt+0 / Alt+1 / Alt+2 / Alt+3) ──────────────────────────
 --
 -- Every preset starts by collapsing to a single editor window built from the
 -- window the cursor is on (keeping its buffer, cursor and view).  From the
@@ -164,25 +164,33 @@ end
 vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-1>', single_with_terminal_layout,
   { noremap = true, silent = true, desc = 'Layout: 1 window + terminal' })
 
--- Alt+2: two side-by-side editors, terminal under the left one (the
--- default startup layout).
-local function two_with_terminal_layout()
+-- Alt+2: two side-by-side editors, no terminal.  Focus stays on the left one.
+local function two_window_layout()
   collapse_to_single_window()
 
   vim.cmd('vsplit')
   vim.cmd('wincmd h')
 
+  terminal.last_editor_win = vim.api.nvim_get_current_win()
+end
+
+vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-2>', two_window_layout,
+  { noremap = true, silent = true, desc = 'Layout: 2 windows, no terminal' })
+
+-- Alt+3: two side-by-side editors, terminal under the left one (the
+-- default startup layout).
+local function two_with_terminal_layout()
+  two_window_layout()
+
   -- Re-open the terminal panel under the left column (restarting the shell
   -- if it exited).  Focus stays on the left editor.
   terminal.ensure()
-
-  terminal.last_editor_win = vim.api.nvim_get_current_win()
 
   vim.cmd('wincmd =')
   terminal.set_height(terminal.SMALL_HEIGHT)
 end
 
-vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-2>', two_with_terminal_layout,
+vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-3>', two_with_terminal_layout,
   { noremap = true, silent = true, desc = 'Layout: 2 windows + terminal' })
 
 -- ─── Goto definition ─────────────────────────────────────────────────────────

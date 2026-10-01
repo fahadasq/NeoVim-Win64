@@ -105,7 +105,7 @@ local function find_term_win()
 end
 
 -- Split a compact panel under the bottom-most window of the left column —
--- the same spot the startup layout and Alt+2 use.  Focus is left unchanged.
+-- the same spot the startup layout and Alt+3 use.  Focus is left unchanged.
 -- Returns the new window and the window it was split from.
 local function open_term_win()
   define_highlights()

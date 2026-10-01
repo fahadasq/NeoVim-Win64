@@ -147,7 +147,8 @@ The `<leader>` key is `\` by default (Neovim default; not remapped here).
 | `Ctrl+Shift+K` | **Close window** — with confirmation (won't close terminal) |
 | `Alt+0` | **Single window layout** — keeps only the current window (or the last editor, if on the terminal); the terminal is hidden but its shell keeps running (`Ctrl+T` brings it back) |
 | `Alt+1` | **Single + terminal layout** — keeps only the current window (or the last editor, if on the terminal) with the compact terminal panel below it |
-| `Alt+2` | **Two windows + terminal layout** — keeps the current window (or the last editor, if on the terminal), closes the rest, and recreates the default two 50/50 editor panes + compact terminal panel under the left one (restarting the shell if it had exited) |
+| `Alt+2` | **Two windows layout** — keeps the current window (or the last editor, if on the terminal), closes the rest, and splits it into two 50/50 editor panes; the terminal is hidden but its shell keeps running (`Ctrl+T` brings it back) |
+| `Alt+3` | **Two windows + terminal layout** — keeps the current window (or the last editor, if on the terminal), closes the rest, and recreates the default two 50/50 editor panes + compact terminal panel under the left one (restarting the shell if it had exited) |
 
 ### Cycling
 
