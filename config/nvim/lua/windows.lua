@@ -1,6 +1,7 @@
 -- lua/windows.lua
 
 local terminal = require('terminal')
+local claude   = require('claude_panel')
 
 -- ─── Startup layout ───────────────────────────────────────────────────────────
 
@@ -20,7 +21,9 @@ vim.api.nvim_create_autocmd('VimEnter', {
 
 vim.keymap.set('n', '<C-k>', function()
   local buf = vim.api.nvim_get_current_buf()
-  if buf == terminal.term_buf then return end
+  if buf == terminal.term_buf or claude.is_buf(buf) then return end
+  -- A Claude diff proposal: killing it means rejecting it.
+  if vim.b[buf].claudecode_diff_tab_name then vim.cmd('ClaudeCodeDiffDeny') ; return end
   local bufs = vim.fn.getbufinfo({ buflisted = 1 })
   if #bufs > 1 then vim.cmd('bprevious') else vim.cmd('enew') end
   vim.api.nvim_buf_delete(buf, { force = false })
@@ -35,6 +38,10 @@ vim.keymap.set('n', '<C-S-k>', function()
                vim.log.levels.INFO)
     return
   end
+  -- Closing the Claude panel only hides it; Claude keeps running.
+  if claude.is_win(cur) then claude.hide() ; return end
+  -- An editor lent to a Claude diff: reject the diff, keep your window.
+  if claude.is_diff_host(cur) then vim.cmd('ClaudeCodeDiffDeny') ; return end
   if #vim.api.nvim_list_wins() <= 1 then
     vim.notify('Cannot close the last window.', vim.log.levels.WARN)
     return
@@ -49,6 +56,10 @@ end, { noremap = true, silent = true, desc = 'Close window (with confirmation)' 
 vim.keymap.set('n', '<C-Bslash>', function()
   if vim.api.nvim_get_current_win() == terminal.term_win then
     vim.notify('Use Alt+\\ to split above the terminal panel.', vim.log.levels.INFO)
+    return
+  end
+  if claude.is_win(vim.api.nvim_get_current_win()) then
+    vim.notify('Split from an editor window, not the Claude panel.', vim.log.levels.INFO)
     return
   end
   vim.cmd('vsplit')
@@ -71,10 +82,16 @@ local function clear_editor_win_style(win)
   vim.api.nvim_set_option_value('relativenumber', true,   { win = win })
   vim.api.nvim_set_option_value('signcolumn',     'yes',  { win = win })
   vim.api.nvim_set_option_value('wrap',           false,  { win = win })
+  -- Set on the Claude panel; matters if a preset reuses that window.
+  vim.api.nvim_set_option_value('winfixwidth',    false,  { win = win })
 end
 
 vim.keymap.set('n', '<M-Bslash>', function()
   local cur = vim.api.nvim_get_current_win()
+  if claude.is_win(cur) then
+    vim.notify('Split from an editor window, not the Claude panel.', vim.log.levels.INFO)
+    return
+  end
   if cur == terminal.term_win then
     vim.cmd('aboveleft split')
     local new_win = vim.api.nvim_get_current_win()
@@ -107,6 +124,7 @@ local function is_editor_win(w)
   return vim.api.nvim_win_is_valid(w)
      and vim.api.nvim_win_get_config(w).relative == ''
      and vim.api.nvim_win_get_buf(w) ~= terminal.term_buf
+     and not claude.is_buf(vim.api.nvim_win_get_buf(w))
 end
 
 local function pick_editor_win()
@@ -144,9 +162,27 @@ local function collapse_to_single_window()
   terminal.last_editor_win = keep
 end
 
+-- The Claude panel survives every preset: if it was showing, it is put back
+-- as a full-height column on the right once the preset is built.  Claude
+-- itself keeps running either way.
+local function keep_claude(layout)
+  return function()
+    -- Reject any open Claude diff first, so an editor lent to it gets its
+    -- file back before the layout is rebuilt from it.
+    local diff = package.loaded['claudecode.diff']
+    if diff then
+      pcall(diff.close_pending_diffs, 'layout preset')
+      pcall(diff.close_rejected_diffs, 'layout preset')
+    end
+    local had = claude.is_visible()
+    layout()
+    if had then claude.reattach() end
+  end
+end
+
 -- Alt+0: one editor, no terminal.  The shell keeps running in its hidden
 -- buffer; Ctrl+T / Ctrl+Shift+T / Home bring the panel back.
-vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-0>', collapse_to_single_window,
+vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-0>', keep_claude(collapse_to_single_window),
   { noremap = true, silent = true, desc = 'Layout: 1 window, no terminal' })
 
 -- Alt+1: one editor with the compact terminal panel under it.
@@ -161,7 +197,7 @@ local function single_with_terminal_layout()
   terminal.expanded = false
 end
 
-vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-1>', single_with_terminal_layout,
+vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-1>', keep_claude(single_with_terminal_layout),
   { noremap = true, silent = true, desc = 'Layout: 1 window + terminal' })
 
 -- Alt+2: two side-by-side editors, no terminal.  Focus stays on the left one.
@@ -174,7 +210,7 @@ local function two_window_layout()
   terminal.last_editor_win = vim.api.nvim_get_current_win()
 end
 
-vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-2>', two_window_layout,
+vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-2>', keep_claude(two_window_layout),
   { noremap = true, silent = true, desc = 'Layout: 2 windows, no terminal' })
 
 -- Alt+3: two side-by-side editors, terminal under the left one (the
@@ -190,8 +226,49 @@ local function two_with_terminal_layout()
   terminal.set_height(terminal.SMALL_HEIGHT)
 end
 
-vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-3>', two_with_terminal_layout,
+vim.keymap.set({ 'n', 'v', 'i', 't' }, '<M-3>', keep_claude(two_with_terminal_layout),
   { noremap = true, silent = true, desc = 'Layout: 2 windows + terminal' })
+
+-- ─── Claude Code panel (Alt+C / Alt+Shift+C / \a…) ───────────────────────────
+--
+-- A full-height Claude Code terminal on the right (claude_panel.lua, driven by
+-- claudecode.nvim).  Closing it only hides it; the session keeps running.
+
+-- Alt+C: focus toggle, like Ctrl+T for the shell -- from anywhere, jump into
+-- Claude (starting or restarting it if needed); from Claude, jump back.
+vim.keymap.set({ 'n', 'i', 't' }, '<M-c>', claude.focus_toggle,
+  { noremap = true, silent = true, desc = 'Claude: focus toggle' })
+
+-- Alt+Shift+C: show / hide the panel without moving focus.
+vim.keymap.set({ 'n', 'i', 't' }, '<M-C>', claude.toggle_visible,
+  { noremap = true, silent = true, desc = 'Claude: show / hide panel' })
+
+-- Alt+C on a selection: send it to Claude as an @-mention and focus Claude.
+vim.keymap.set('v', '<M-c>', '<Cmd>ClaudeCodeSend<CR>',
+  { noremap = true, silent = true, desc = 'Claude: send selection' })
+
+local function claude_cmd(lhs, cmd, desc)
+  vim.keymap.set('n', lhs, '<Cmd>' .. cmd .. '<CR>',
+    { noremap = true, silent = true, desc = 'Claude: ' .. desc })
+end
+
+claude_cmd('<leader>ab', 'ClaudeCodeAdd %',            'add current file')
+claude_cmd('<leader>aa', 'ClaudeCodeDiffAccept',       'accept diff')
+claude_cmd('<leader>ad', 'ClaudeCodeDiffDeny',         'deny diff')
+claude_cmd('<leader>ar', 'ClaudeCodeOpen --resume',    'resume a session')
+claude_cmd('<leader>aC', 'ClaudeCodeOpen --continue',  'continue last session')
+
+-- Like :ClaudeCodeSelectModel, but opens with :ClaudeCodeOpen so a visible
+-- panel is never toggled away.
+vim.keymap.set('n', '<leader>am', function()
+  local models = require('claudecode').state.config.models or {}
+  vim.ui.select(models, {
+    prompt      = 'Claude model: ',
+    format_item = function(m) return m.name end,
+  }, function(choice)
+    if choice then vim.cmd('ClaudeCodeOpen --model ' .. choice.value) end
+  end)
+end, { noremap = true, silent = true, desc = 'Claude: pick model' })
 
 -- ─── Goto definition ─────────────────────────────────────────────────────────
 --
@@ -212,7 +289,7 @@ local function other_editor_win()
   local cur     = vim.api.nvim_get_current_win()
   local editors = {}
   for _, w in ipairs(vim.api.nvim_list_wins()) do
-    if w ~= terminal.term_win then table.insert(editors, w) end
+    if w ~= terminal.term_win and not claude.is_win(w) then table.insert(editors, w) end
   end
   if #editors < 2 then return nil end
   for i, w in ipairs(editors) do

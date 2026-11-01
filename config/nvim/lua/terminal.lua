@@ -273,19 +273,29 @@ end
 
 -- ─── Focus toggle (Ctrl+T) ───────────────────────────────────────────────────
 
+-- The Claude panel (claude_panel.lua) is not an editor: leaving the shell
+-- never goes there, so Ctrl+T can't ping-pong between the two terminals.
+local function is_editor(w)
+  return w ~= M.term_win and vim.api.nvim_win_is_valid(w) and not is_float(w)
+     and not require('claude_panel').is_win(w)
+end
+
+local function editor_target()
+  local target = M.last_editor_win
+  if target and is_editor(target) then return target end
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    if is_editor(w) then return w end
+  end
+end
+
 local function focus_toggle()
   local recovered = M.ensure()
   local cur = vim.api.nvim_get_current_win()
   if cur == M.term_win and not recovered then
-    local target = M.last_editor_win
-    if not (target and vim.api.nvim_win_is_valid(target)) then
-      for _, w in ipairs(vim.api.nvim_list_wins()) do
-        if w ~= M.term_win then target = w ; break end
-      end
-    end
+    local target = editor_target()
     if target then vim.api.nvim_set_current_win(target) end
   else
-    if cur ~= M.term_win then M.last_editor_win = cur end
+    if is_editor(cur) then M.last_editor_win = cur end
     vim.api.nvim_set_current_win(M.term_win)
     term_scroll_bottom()
     vim.cmd('startinsert')
@@ -320,9 +330,10 @@ local function cycle_editors()
   local cur     = vim.api.nvim_get_current_win()
   local editors = {}
   for _, w in ipairs(vim.api.nvim_list_wins()) do
-    if w ~= M.term_win then table.insert(editors, w) end
+    if is_editor(w) then table.insert(editors, w) end
   end
-  if #editors < 2 then return end
+  -- From a panel (shell / Claude) even a single editor is somewhere to go.
+  if #editors == 0 or (#editors == 1 and editors[1] == cur) then return end
   for i, w in ipairs(editors) do
     if w == cur then
       local next = editors[(i % #editors) + 1]
@@ -351,16 +362,11 @@ local function focus_expand_toggle()
   if cur == M.term_win and not recovered then
     -- Collapse and return to editor.
     if M.set_height(M.SMALL_HEIGHT) then M.expanded = false end
-    local target = M.last_editor_win
-    if not (target and vim.api.nvim_win_is_valid(target)) then
-      for _, w in ipairs(vim.api.nvim_list_wins()) do
-        if w ~= M.term_win then target = w ; break end
-      end
-    end
+    local target = editor_target()
     if target then vim.api.nvim_set_current_win(target) end
   else
     -- Expand and focus terminal.
-    if cur ~= M.term_win then M.last_editor_win = cur end
+    if is_editor(cur) then M.last_editor_win = cur end
     M.LARGE_HEIGHT = math.floor(vim.o.lines * 0.5)
     if not M.expanded and M.set_height(M.LARGE_HEIGHT) then
       M.expanded = true

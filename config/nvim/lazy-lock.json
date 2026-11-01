@@ -1,5 +1,6 @@
 {
   "Comment.nvim": { "branch": "master", "commit": "e30b7f2008e52442154b66f7c519bfd2f1e32acb" },
+  "claudecode.nvim": { "branch": "main", "commit": "92f03b71383b5c4b262f7a493f76a432edf71bef" },
   "cmp-nvim-lsp": { "branch": "main", "commit": "cbc7b02bb99fae35cb42f514762b89b5126651ef" },
   "gruvbox": { "branch": "main", "commit": "105c6c2f25a0fa1f70e39b1b4df7dd8163d8e40c" },
   "indent-blankline.nvim": { "branch": "master", "commit": "f1e186e44d3b7f9ae918008e2c28ce37c6023d2d" },

@@ -23,6 +23,18 @@ return {
                 disable_background = true,
                 disable_float_background = true,
                 disable_italics = true,
+                -- Neovide draws a highlight's `blend` as real see-through
+                -- pixels (the desktop shows through diff lines, MatchParen,
+                -- ...).  The theme already mixes `blend` into `bg` before
+                -- setting the group, so do that mixing here and drop the
+                -- attribute: same colour, fully opaque.
+                before_highlight = function(_, hl, palette)
+                    if hl.blend and hl.bg and hl.blend >= 0 and hl.blend <= 100 then
+                        hl.bg = require('naysayer.utilities').blend(
+                            hl.bg, hl.blend_on or palette.base, hl.blend / 100)
+                        hl.blend = nil
+                    end
+                end,
             })
             vim.cmd('colorscheme naysayer')
         end,
@@ -130,4 +142,30 @@ return {
     -- ─── Completion ────────────────────────────────────────────────────────────
     { 'hrsh7th/nvim-cmp' },
     { 'hrsh7th/cmp-nvim-lsp' },
+
+    -- ─── Claude Code ───────────────────────────────────────────────────────────
+    -- IDE bridge for the Claude Code CLI (MCP server, selection tracking,
+    -- diffs).  No snacks.nvim: the terminal is our own panel
+    -- (lua/claude_panel.lua), passed in as a custom provider.  Keys live in
+    -- windows.lua.
+    {
+        'coder/claudecode.nvim',
+        event  = 'VeryLazy',
+        config = function()
+            require('claudecode').setup({
+                log_level        = 'warn',
+                focus_after_send = true,   -- Alt+C (visual) / \ab land in Claude
+                terminal = {
+                    provider               = require('claude_panel').provider,
+                    split_width_percentage = 0.30,
+                },
+                -- Inline diff: one read-only view, removed and added lines
+                -- interleaved.  With 2+ editors open it borrows one of them
+                -- (claude_panel.lua), otherwise it opens beside the editor.
+                -- The default side-by-side diff adds two panels (before +
+                -- after) whenever that editor shows a different file.
+                diff_opts = { layout = 'unified' },
+            })
+        end,
+    },
 }
