@@ -129,7 +129,9 @@ drop the `cmd` override once upstream has the fix).
   mouse-wheel scroll or click drops the panel into Normal mode.  Likewise
   each Claude diff proposal buffer gets Normal-mode `Esc` / `Ctrl+G` /
   `Ctrl+[` = reject, set in `claude_panel.lua`'s `ClaudeCodeDiffOpened`
-  handler.)
+  handler.  And the shell buffer's `PageUp` / `PageDown`, which scroll its
+  scrollback instead of walking shell history, are buffer-local, set in
+  `terminal.lua:set_scroll_keys()` when the shell starts.)
 - `options.lua` has a FileType autocmd that enforces indent settings and
   formatoptions globally — filetype-specific overrides need to go *after* this
   autocmd or use a higher-priority autocmd.

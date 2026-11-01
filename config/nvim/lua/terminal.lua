@@ -133,9 +133,33 @@ local function open_term_win()
   return tw, host
 end
 
+-- PageUp / PageDown scroll the shell's scrollback instead of reaching the
+-- shell (where they walk its command history).  PageUp leaves Terminal mode
+-- and scrolls a page; PageDown scrolls back down and resumes typing once the
+-- bottom is in view.  Buffer-local, so the Claude panel keeps its own keys.
+local PAGE_DOWN = vim.keycode('<C-f>')
+
+local function page_down()
+  pcall(vim.cmd, 'normal! ' .. PAGE_DOWN)
+  if vim.fn.line('w$') >= vim.fn.line('$') then vim.cmd('startinsert') end
+end
+
+local function set_scroll_keys(buf)
+  local o = { buffer = buf, noremap = true, silent = true }
+  vim.keymap.set('t', '<PageUp>',   [[<C-\><C-n><C-b>]],
+    vim.tbl_extend('force', o, { desc = 'Scroll terminal up' }))
+  vim.keymap.set('t', '<PageDown>', '<Nop>',
+    vim.tbl_extend('force', o, { desc = 'Already at the bottom' }))
+  vim.keymap.set('n', '<PageUp>',   '<C-b>',
+    vim.tbl_extend('force', o, { desc = 'Scroll terminal up' }))
+  vim.keymap.set('n', '<PageDown>', page_down,
+    vim.tbl_extend('force', o, { desc = 'Scroll terminal down' }))
+end
+
 -- Start a fresh shell in a new buffer shown in `win`.
 local function start_shell(win)
   local buf = vim.api.nvim_create_buf(false, false)
+  set_scroll_keys(buf)
   vim.api.nvim_win_set_buf(win, buf)
   local chan
   vim.api.nvim_win_call(win, function()
