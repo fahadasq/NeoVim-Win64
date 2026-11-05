@@ -114,10 +114,57 @@ end
 --
 -- No virtual text (the inline messages at end of line that go off-screen).
 -- No gutter signs.
--- Coloured underlines only: yellow for warnings, red for errors.
+-- Coloured underlines: yellow for warnings, red for errors.  Lines holding
+-- an error also get a full-width background (DiagnosticErrorLine).
 -- Full message shown in a float when you press <C-m> (see keymaps.lua).
 
+local function define_diagnostic_highlights()
+    vim.api.nvim_set_hl(0, 'DiagnosticErrorLine', { bg = '#3b1a1d' })
+end
+define_diagnostic_highlights()
+-- `:colorscheme` runs `hi clear`, which would wipe the group.
+vim.api.nvim_create_autocmd('ColorScheme', { callback = define_diagnostic_highlights })
+
+-- The built-in `signs` handler can do this with `linehl`, but it also places
+-- a sign, which opens the sign column.  This handler sets only the line
+-- highlight.  Only the line an error starts on is painted (the underline
+-- still covers the whole span), so a multi-line error doesn't flood a block.
+--
+-- Each diagnostic source (one per LSP client) gets its own extmark namespace,
+-- so ts_ls re-publishing doesn't clear eslint's error lines.
+local function error_line_ns(namespace)
+    local ns = vim.diagnostic.get_namespace(namespace)
+    if not ns.user_data.error_line_ns then
+        ns.user_data.error_line_ns =
+            vim.api.nvim_create_namespace('diagnostic_error_line_' .. ns.name)
+    end
+    return ns.user_data.error_line_ns
+end
+
+vim.diagnostic.handlers.error_line = {
+    show = function(namespace, bufnr, diagnostics, _)
+        local ns         = error_line_ns(namespace)
+        local line_count = vim.api.nvim_buf_line_count(bufnr)
+        vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+        for _, d in ipairs(diagnostics) do
+            if d.severity == vim.diagnostic.severity.ERROR then
+                vim.api.nvim_buf_set_extmark(bufnr, ns,
+                    math.min(d.lnum, line_count - 1), 0, {
+                        line_hl_group = 'DiagnosticErrorLine',
+                        priority      = vim.hl.priorities.diagnostics,
+                    })
+            end
+        end
+    end,
+    hide = function(namespace, bufnr)
+        if vim.api.nvim_buf_is_valid(bufnr) then
+            vim.api.nvim_buf_clear_namespace(bufnr, error_line_ns(namespace), 0, -1)
+        end
+    end,
+}
+
 vim.diagnostic.config({
+    error_line       = true,    -- full-line background on error lines
     virtual_text     = false,   -- disable end-of-line inline messages
     signs            = false,   -- disable gutter W / E symbols
     underline        = true,    -- coloured underline at the problem site

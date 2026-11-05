@@ -111,8 +111,10 @@ drop the `cmd` override once upstream has the fix).
   `terminal.lua:load_project()`.
 - **Manual completion** — nvim-cmp popup only appears on explicit Ctrl+N; no
   auto-popup while typing.
-- **Diagnostics as underlines only** — no virtual text, no gutter signs; float
-  shown on Ctrl+M.
+- **Diagnostics as underlines** — no virtual text, no gutter signs; float
+  shown on Ctrl+M.  The line an error starts on also gets a full-width
+  `DiagnosticErrorLine` background, set by a custom `error_line` diagnostic
+  handler in `lsp.lua` (the built-in `signs.linehl` would open the sign column).
 - **No comment continuation** — `formatoptions` strips `c`, `r`, `o` on every
   FileType event so pressing Enter in a comment block does not auto-insert
   comment leaders.
